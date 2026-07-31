@@ -2,6 +2,7 @@ package com.mikmy.tether
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -11,11 +12,19 @@ import android.view.SurfaceView
  * loop. Touch events arrive on the UI thread, so every mutation of [Game] is
  * guarded by a single lock shared with the render thread.
  */
-class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+class GameView(
+    context: Context,
+    baseline: Boolean = false
+) : SurfaceView(context), SurfaceHolder.Callback {
+
+    private val baselineOnly = BuildConfig.DEBUG && baseline
 
     private val sfx = Sfx()
     private val game = Game(context, sfx)
     private val lock = Any()
+
+    /** ~60 fps. */
+    private val FRAME_NS = 16_666_667L
 
     @Volatile private var running = false
     @Volatile private var paused = false
@@ -69,6 +78,10 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
         running = true
         thread = Thread {
             var last = System.nanoTime()
+            var frames = 0
+            var fpsWindow = 0f
+            var lockNs = 0L
+            var drawNs = 0L
             while (running) {
                 if (paused) {
                     try {
@@ -85,6 +98,7 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
 
                 // GPU-backed canvas (API 26+); every frame repaints the whole
                 // surface, so the unpreserved back buffer is fine.
+                val t0 = System.nanoTime()
                 val canvas = try {
                     holder.lockHardwareCanvas()
                 } catch (e: Throwable) {
@@ -102,16 +116,56 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                     }
                     continue
                 }
+                val t1 = System.nanoTime()
                 try {
                     synchronized(lock) {
                         game.update(dt)
-                        game.draw(canvas)
+                        if (baselineOnly) {
+                            canvas.drawColor(android.graphics.Color.BLACK)
+                        } else {
+                            game.draw(canvas)
+                        }
                     }
                 } finally {
                     try {
                         holder.unlockCanvasAndPost(canvas)
                     } catch (e: Throwable) {
                         // surface went away mid-frame
+                    }
+                }
+                val t2 = System.nanoTime()
+
+                // Pace to the target frame rate. Posting the buffer usually
+                // blocks on vsync and paces us for free, but when it does not
+                // (emulators, or a surface with spare buffers) an unpaced loop
+                // burns a whole core and starves everything else on the device.
+                val frameNs = t2 - t0
+                if (frameNs < FRAME_NS) {
+                    val sleepMs = (FRAME_NS - frameNs) / 1_000_000L
+                    if (sleepMs > 0) {
+                        try {
+                            Thread.sleep(sleepMs)
+                        } catch (e: InterruptedException) {
+                            break
+                        }
+                    }
+                }
+
+                if (BuildConfig.DEBUG) {
+                    frames++
+                    fpsWindow += dt
+                    lockNs += t1 - t0
+                    drawNs += t2 - t1
+                    if (fpsWindow >= 2f) {
+                        Log.d(
+                            "Tether",
+                            "fps=%.1f lock=%.1fms draw+post=%.1fms".format(
+                                frames / fpsWindow,
+                                lockNs / 1e6 / frames,
+                                drawNs / 1e6 / frames
+                            )
+                        )
+                        frames = 0; fpsWindow = 0f; lockNs = 0L; drawNs = 0L
                     }
                 }
             }
