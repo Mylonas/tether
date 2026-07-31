@@ -58,6 +58,10 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig = true   // only used for the debug-only fps log
+    }
+
     lint {
         abortOnError = false
         checkReleaseBuilds = true
