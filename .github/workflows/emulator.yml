@@ -46,7 +46,7 @@ jobs:
           ram-size: 4096M
           disable-animations: false
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none
-          script: ./.github/scripts/play.sh com.mikmy.tether hold
+          script: bash .github/scripts/play.sh com.mikmy.tether hold
 
       - name: Upload screenshots and logs
         if: always()
