@@ -82,18 +82,6 @@ echo "== frame rate reported by the game =="
 grep -h "fps=" "$OUT/logcat.txt" | tail -20 | tee "$OUT/fps.txt" || echo "(no fps lines)"
 
 echo
-echo "== baseline: identical loop, background only =="
-# Attributes the frame time: if clearing the screen alone costs the same as a
-# full frame, the cost is the rasterizer, not the game's drawing.
-adb shell am force-stop "$PKG"
-sleep 2
-adb logcat -c
-adb shell am start -n "$PKG/.MainActivity" --ez baseline true >/dev/null
-sleep 14
-adb logcat -d | grep "fps=" | tail -4 | tee "$OUT/fps-baseline.txt"
-adb shell am force-stop "$PKG"
-
-echo
 echo "== crash check =="
 FAIL=0
 if grep -qE "FATAL EXCEPTION|AndroidRuntime: .*Exception" "$OUT/logcat.txt"; then
@@ -123,5 +111,17 @@ fi
 
 # Anything the game itself logged as a problem
 grep -iE "$PKG.*(error|failed)" "$OUT/logcat.txt" | head -10 || true
+
+echo
+echo "== baseline: identical loop, background only =="
+# Attributes the frame time: if clearing the screen alone costs the same as a
+# full frame, the cost is the rasterizer, not the game's drawing.
+adb shell am force-stop "$PKG"
+sleep 2
+adb logcat -c
+adb shell am start -n "$PKG/.MainActivity" --ez baseline true >/dev/null
+sleep 14
+adb logcat -d | grep "fps=" | tail -4 | tee "$OUT/fps-baseline.txt"
+adb shell am force-stop "$PKG"
 
 exit $FAIL
