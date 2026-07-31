@@ -28,6 +28,10 @@ echo "== screen ${W}x${H} =="
 adb logcat -c
 adb shell am start -W -n "$PKG/.MainActivity"
 sleep 6
+# dismiss Android's one-time "Viewing full screen" notice so it stops
+# covering the top of every screenshot
+adb shell input tap $((W * 4 / 5)) $((H / 4))
+sleep 2
 shot 01-title
 
 echo "== playing ($STYLE) =="
@@ -86,9 +90,15 @@ if grep -qE "FATAL EXCEPTION|AndroidRuntime: .*Exception" "$OUT/logcat.txt"; the
   FAIL=1
 fi
 if grep -q "ANR in $PKG" "$OUT/logcat.txt"; then
-  echo "ANR DETECTED"
+  echo "ANR DETECTED IN THE GAME"
   grep -A 10 "ANR in $PKG" "$OUT/logcat.txt" | head -30
   FAIL=1
+fi
+# A system_server ANR means we starved the whole emulator, which is worth
+# seeing even though it is not our process.
+if grep -q "ANR in " "$OUT/logcat.txt"; then
+  echo "NOTE: system-wide ANR observed:"
+  grep "ANR in " "$OUT/logcat.txt" | head -5
 fi
 
 PID=$(adb shell pidof "$PKG" | tr -d '\r')
