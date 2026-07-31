@@ -14,7 +14,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        view = GameView(this)
+        // Debug-only: "--ez baseline true" runs the same loop drawing only the
+        // background, which is how the render cost gets attributed.
+        view = GameView(this, intent?.getBooleanExtra("baseline", false) == true)
         setContentView(view)
         goFullscreen()
     }

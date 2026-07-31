@@ -12,7 +12,12 @@ import android.view.SurfaceView
  * loop. Touch events arrive on the UI thread, so every mutation of [Game] is
  * guarded by a single lock shared with the render thread.
  */
-class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
+class GameView(
+    context: Context,
+    baseline: Boolean = false
+) : SurfaceView(context), SurfaceHolder.Callback {
+
+    private val baselineOnly = BuildConfig.DEBUG && baseline
 
     private val sfx = Sfx()
     private val game = Game(context, sfx)
@@ -115,7 +120,11 @@ class GameView(context: Context) : SurfaceView(context), SurfaceHolder.Callback 
                 try {
                     synchronized(lock) {
                         game.update(dt)
-                        game.draw(canvas)
+                        if (baselineOnly) {
+                            canvas.drawColor(android.graphics.Color.BLACK)
+                        } else {
+                            game.draw(canvas)
+                        }
                     }
                 } finally {
                     try {
