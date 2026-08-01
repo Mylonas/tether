@@ -17,15 +17,20 @@ class PhysicsTest {
 
     private fun world(seed: Long = 1L) = World(W, H, seed)
 
-    /** Mirrors a competent player: hold, and let go while the swing is heading up. */
+    /**
+     * Mirrors a competent player: press to fire the grapple, ride the swing,
+     * let go while the momentum is heading up, then press again for the next
+     * anchor. The re-press matters — the grapple only fires on a press edge.
+     */
     private fun autoplay(w: World, seconds: Float, dt: Float = 1f / 60f): World {
         var t = 0f
-        var holding = true
+        var holding = false
         var grabbedAt = 0f
         while (t < seconds && !w.dead) {
             val a = w.anchor
             if (a == null) {
-                holding = true
+                // lift for a frame so the next press registers, then reach again
+                holding = !holding
             } else {
                 if (w.evGrab) grabbedAt = w.time
                 val up = w.vy < 0f
@@ -192,8 +197,11 @@ class PhysicsTest {
     }
 
     @Test
-    fun hangingOnForeverIsAlsoFatal() {
-        // Holding the rope down must not be a way to stall out the run.
+    fun holdingForeverDoesNotCarryARun() {
+        // The grapple fires on the PRESS, not for as long as the finger is
+        // down. Retrying every frame made holding a magnet that latched every
+        // anchor by itself, so a run could be finished without ever using the
+        // release: 67s for press-once-never-let-go versus 13s for playing.
         val w = world()
         var t = 0f
         while (t < 240f && !w.dead) {
@@ -202,6 +210,46 @@ class PhysicsTest {
             t += 1f / 60f
         }
         assertTrue("holding forever survived four minutes", w.dead)
+        assertTrue("one press should fire one grapple, fired ${w.grabs}", w.grabs <= 1)
+        assertTrue("holding forever lasted ${w.time}s", w.time < 30f)
+    }
+
+    @Test
+    fun liftingAndPressingAgainFiresANewGrapple() {
+        val w = world()
+        w.update(1f / 60f, true)              // press
+        assertNotNull("the press did not grapple", w.anchor)
+        val first = w.grabs
+        w.release(false)
+        // still held: no new grapple, however long we wait
+        var t = 0f
+        while (t < 1.5f && !w.dead) {
+            w.clearEvents(); w.update(1f / 60f, true); t += 1f / 60f
+        }
+        assertEquals("a held finger re-grabbed on its own", first, w.grabs)
+
+        // lift, then press again
+        w.clearEvents(); w.update(1f / 60f, false)
+        t = 0f
+        while (t < 1.5f && !w.dead && w.anchor == null) {
+            w.clearEvents(); w.update(1f / 60f, true); t += 1f / 60f
+        }
+        assertTrue("a fresh press did not grapple", w.grabs > first || w.dead)
+    }
+
+    @Test
+    fun theReachExpiresSoADeadFingerIsVisible() {
+        val w = world()
+        // press somewhere with nothing in range
+        w.py = w.anchors.minOf { it.y } - w.unit * 3f
+        w.clearEvents()
+        w.update(1f / 60f, true)
+        assertTrue("the press should be reaching", w.reaching)
+        var t = 0f
+        while (t < Tune.GRAB_WINDOW + 0.2f && !w.dead) {
+            w.clearEvents(); w.update(1f / 60f, true); t += 1f / 60f
+        }
+        assertFalse("the reach never expired", w.reaching)
     }
 
     @Test
