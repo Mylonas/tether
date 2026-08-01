@@ -99,15 +99,19 @@ frame while held — so holding acted as a magnet that latched every anchor by
 itself, and a run could be finished **without ever using the release**. Half the
 advertised control scheme was optional.
 
-The grapple now reaches only for a 0.9s window after each press, and the reach
-indicator shows that window expiring rather than leaving a dead finger down.
-Measured across the three policies:
+The grapple now reaches only for a **1.4s window** after each press, and the
+reach indicator shows that window expiring rather than leaving a dead finger
+down. Measured across the three policies:
 
 | policy | before | after |
 | --- | --- | --- |
-| hold forever | 67.4s | 2.1s |
+| hold forever | 67.4s | 2.5s |
 | plays properly | 13s | 13s |
 | blind timed presses | 1.4s | 1.4s |
+
+1.4s is the forgiving end of the range that still kills the degenerate strategy;
+tightening it to 0.9s only moves hold-forever from 2.5s to 2.1s and costs
+forgiveness elsewhere.
 
 Only the degenerate strategy moves. A test asserts it directly: holding forever
 no longer carries a run.
