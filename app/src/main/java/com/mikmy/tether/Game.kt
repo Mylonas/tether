@@ -250,10 +250,7 @@ class Game(ctx: Context, private val sfx: Sfx) {
                 startRun()
                 holding = true          // the starting tap is also your first grapple
             }
-            Phase.PLAY -> {
-                holding = true
-                world?.tryGrab()
-            }
+            Phase.PLAY -> holding = true   // World fires the grapple on the press edge
             Phase.OVER -> if (overTimer > 0.6f) startRun()
         }
     }
@@ -474,8 +471,9 @@ class Game(ctx: Context, private val sfx: Sfx) {
         p.color = colPlayer
         c.drawCircle(world.px, world.py - cam, r, p)
 
-        // reaching hint while you hold with nothing attached
-        if (holding && world.anchor == null) {
+        // The reach only lasts a moment after a press, so show it expiring
+        // rather than letting the player hold a dead finger down.
+        if (world.reaching) {
             p.style = Paint.Style.STROKE
             p.strokeWidth = unit * 0.0025f
             p.color = withAlpha(colRope, 40)
