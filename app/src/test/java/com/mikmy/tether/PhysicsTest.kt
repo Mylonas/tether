@@ -203,14 +203,23 @@ class PhysicsTest {
         // anchor by itself, so a run could be finished without ever using the
         // release: 67s for press-once-never-let-go versus 13s for playing.
         val w = world()
+        val dt = 1f / 60f
         var t = 0f
-        while (t < 240f && !w.dead) {
-            w.clearEvents()
-            w.update(1f / 60f, true)
-            t += 1f / 60f
+        // everything the single press is allowed to catch
+        while (t < Tune.GRAB_WINDOW + 0.1f && !w.dead) {
+            w.clearEvents(); w.update(dt, true); t += dt
         }
+        val duringWindow = w.grabs
+        while (t < 240f && !w.dead) {
+            w.clearEvents(); w.update(dt, true); t += dt
+        }
+        // The invariant, independent of what GRAB_WINDOW happens to be: the
+        // grapple never fires again until the finger lifts and presses.
+        assertEquals(
+            "the grapple fired after its window closed",
+            duringWindow, w.grabs
+        )
         assertTrue("holding forever survived four minutes", w.dead)
-        assertTrue("a single press latched ${w.grabs} anchors", w.grabs <= 3)
         assertTrue("holding forever lasted ${w.time}s", w.time < 30f)
     }
 

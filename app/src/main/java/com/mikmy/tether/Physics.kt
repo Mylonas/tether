@@ -49,11 +49,19 @@ object Tune {
      * press-once-never-let-go versus 13s for actually timing the releases.
      *
      * Bounding the reach to a window after each press is what was measured to
-     * fix it — hold-forever drops to about 2s while a bot that plays properly
-     * is unchanged. The window is generous on purpose: pressing early still
-     * catches, and a press that snaps quickly can still take the next anchor.
+     * fix it. The window is generous on purpose: pressing early still catches,
+     * and a press that snaps quickly can still take the next anchor. Measured
+     * median run, over ten seeds:
+     *
+     *     window     hold-forever   plays properly   blind timed presses
+     *     unlimited  67.4s          13s              1.4s
+     *     1.4s        2.5s          13s              1.4s
+     *     0.9s        2.1s          13s              1.4s
+     *
+     * 1.4s is the forgiving end of the range that still kills the degenerate
+     * strategy, which is the point of the gate — not making the game harder.
      */
-    const val GRAB_WINDOW = 0.9f
+    const val GRAB_WINDOW = 1.4f
 
     // 0.09 puts a bot's collection rate around 70%: chains are achievable, but
     // breaking one is a real event. Measured, not guessed.
