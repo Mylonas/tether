@@ -157,4 +157,4 @@ app/src/main/java/com/mikmy/tether/
 
 All tuning constants are in `Tune` at the top of `Physics.kt`.
 
-- minSdk 26, targetSdk 34, portrait only.
+- minSdk 26, targetSdk 35, portrait only.
