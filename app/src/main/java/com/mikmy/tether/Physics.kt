@@ -40,6 +40,20 @@ object Tune {
     const val CAM_UP = 9f
     const val CAM_DOWN = 1.6f
 
+    /**
+     * How long after a press the grapple keeps reaching for an anchor.
+     *
+     * The grab is gated to the PRESS, and only one grapple is fired per press.
+     * Retrying every frame while the finger was down turned holding into a
+     * magnet that latched every anchor automatically, so a run could be carried
+     * without ever using the release: measured at 67s for press-once-never-let-go
+     * versus 13s for actually timing the releases. Gating drops hold-forever to
+     * about 2s and leaves skilled play untouched.
+     *
+     * The window exists so pressing slightly early still catches.
+     */
+    const val GRAB_WINDOW = 0.9f
+
     // 0.09 puts a bot's collection rate around 70%: chains are achievable, but
     // breaking one is a real event. Measured, not guessed.
     const val SPARK_R = 0.09f
@@ -118,6 +132,9 @@ class World(@JvmField val vw: Float, @JvmField val vh: Float, seed: Long = 1L) {
 
     private var lastReleased: Anchor? = null
     private var lastReleaseAt = -99f
+    private var wasHolding = false
+    private var pressAt = -99f
+    private var grabbedThisPress = false
     private var nextMilestone = Tune.MILESTONE_M
 
     // ---- one-frame events, drained by the presenter ----
@@ -145,6 +162,11 @@ class World(@JvmField val vw: Float, @JvmField val vh: Float, seed: Long = 1L) {
     val multiplier: Int get() = min(10, 1 + combo / 5)
 
     val score: Int get() = metres + sparkScore
+
+    /** True while a press is still hunting for something to grab. */
+    val reaching: Boolean
+        get() = wasHolding && anchor == null && !grabbedThisPress &&
+            time - pressAt < Tune.GRAB_WINDOW
 
     /** How far into the difficulty ramp the player has climbed, 0..1. */
     val ramp: Float get() = min(1f, (-topGen / unit) / Tune.RAMP_UNITS)
@@ -215,7 +237,15 @@ class World(@JvmField val vw: Float, @JvmField val vh: Float, seed: Long = 1L) {
         px += vx * dt
         py += vy * dt
 
-        if (holding && anchor == null) tryGrab()
+        // One grapple per press. See Tune.GRAB_WINDOW: retrying for as long as
+        // the finger was down made holding a magnet, and the release action
+        // never had to be used.
+        if (holding && !wasHolding) {
+            pressAt = time
+            grabbedThisPress = false
+        }
+        wasHolding = holding
+        if (reaching && tryGrab()) grabbedThisPress = true
 
         val a = anchor
         if (a != null) {
