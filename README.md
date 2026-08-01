@@ -84,6 +84,32 @@ caused by the player rather than the generator. Spark radius was picked the same
 way: `0.09` puts a bot's collection rate near 70%, so chains are achievable but
 breaking one is a real event.
 
+## Open question: is releasing actually necessary?
+
+A later review pass put three policies through the same rig, and the result is
+not comfortable:
+
+| policy | median run |
+| --- | --- |
+| press once, never release | 67s |
+| mash the screen | 19s |
+| time the releases (bot heuristic) | 13s |
+
+Holding the finger down dominates, because `update` retries the grapple every
+frame while the finger is down — so holding acts as a magnet that latches every
+anchor automatically and the release action never has to be used. Gating the
+grab to the press instead collapses hold-forever to 2s, which suggests that is
+the right fix.
+
+It has **not** been applied, deliberately. In the same measurement a mindless
+masher (19s) beat the bot that tries to play properly (13s), which means the
+release heuristic is not a credible stand-in for a human and none of these
+numbers can be trusted as a picture of skilled play. Changing the core control
+scheme on that evidence would be guesswork on a game that currently works.
+
+This one needs a thumb, not a bot. If holding the screen down really does carry
+a run, gate the grab to the press — the change is two lines in `World.update`.
+
 ## Tests
 
 `app/src/test` runs the real simulation on the JVM and asserts the properties
