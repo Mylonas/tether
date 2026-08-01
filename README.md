@@ -99,12 +99,18 @@ frame while held — so holding acted as a magnet that latched every anchor by
 itself, and a run could be finished **without ever using the release**. Half the
 advertised control scheme was optional.
 
-The grapple now fires once per press, with a 0.9s reach window so pressing
-slightly early still catches, and the reach indicator shows that window expiring
-rather than leaving a dead finger down. In the rig this drops hold-forever from
-67s to about 2s and leaves a bot that actually plays unchanged at 13s. A test
-asserts it directly: one press fires at most one grapple, and holding forever no
-longer carries a run.
+The grapple now reaches only for a 0.9s window after each press, and the reach
+indicator shows that window expiring rather than leaving a dead finger down.
+Measured across the three policies:
+
+| policy | before | after |
+| --- | --- | --- |
+| hold forever | 67.4s | 2.1s |
+| plays properly | 13s | 13s |
+| blind timed presses | 1.4s | 1.4s |
+
+Only the degenerate strategy moves. A test asserts it directly: holding forever
+no longer carries a run.
 
 One caveat worth keeping in mind: in the same measurement a mindless masher
 (19s) beat the bot that tries to play properly (13s), so that release heuristic
