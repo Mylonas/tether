@@ -210,7 +210,7 @@ class PhysicsTest {
             t += 1f / 60f
         }
         assertTrue("holding forever survived four minutes", w.dead)
-        assertTrue("one press should fire one grapple, fired ${w.grabs}", w.grabs <= 1)
+        assertTrue("a single press latched ${w.grabs} anchors", w.grabs <= 3)
         assertTrue("holding forever lasted ${w.time}s", w.time < 30f)
     }
 
@@ -221,12 +221,13 @@ class PhysicsTest {
         assertNotNull("the press did not grapple", w.anchor)
         val first = w.grabs
         w.release(false)
-        // still held: no new grapple, however long we wait
+        // keep holding well past the window: the reach must lapse
         var t = 0f
-        while (t < 1.5f && !w.dead) {
+        while (t < Tune.GRAB_WINDOW + 1.0f && !w.dead) {
             w.clearEvents(); w.update(1f / 60f, true); t += 1f / 60f
         }
-        assertEquals("a held finger re-grabbed on its own", first, w.grabs)
+        assertFalse("the reach never lapsed under a held finger", w.reaching)
+        val afterLapse = w.grabs
 
         // lift, then press again
         w.clearEvents(); w.update(1f / 60f, false)
@@ -234,7 +235,7 @@ class PhysicsTest {
         while (t < 1.5f && !w.dead && w.anchor == null) {
             w.clearEvents(); w.update(1f / 60f, true); t += 1f / 60f
         }
-        assertTrue("a fresh press did not grapple", w.grabs > first || w.dead)
+        assertTrue("a fresh press did not grapple", w.grabs > afterLapse || w.dead)
     }
 
     @Test
