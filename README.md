@@ -11,8 +11,8 @@ third-party runtime dependencies.
 
 | Input | Action |
 | --- | --- |
-| Hold anywhere | Grapple the nearest anchor above you, and get reeled in. |
-| Release | Let go and fly on whatever momentum you built. |
+| Press | Fire the grapple at the nearest anchor above you and get reeled in. One grapple per press. |
+| Release | Let go and fly on whatever momentum you built. Press again for the next anchor. |
 | Back | Bail out to the title screen. |
 
 Riding a rope all the way in gives you the most speed, but costs time — and the
@@ -84,31 +84,33 @@ caused by the player rather than the generator. Spark radius was picked the same
 way: `0.09` puts a bot's collection rate near 70%, so chains are achievable but
 breaking one is a real event.
 
-## Open question: is releasing actually necessary?
+## The grapple fires on the press, not on the hold
 
-A later review pass put three policies through the same rig, and the result is
-not comfortable:
+A review pass put three policies through the same rig:
 
 | policy | median run |
 | --- | --- |
 | press once, never release | 67s |
 | mash the screen | 19s |
-| time the releases (bot heuristic) | 13s |
+| time the releases | 13s |
 
-Holding the finger down dominates, because `update` retries the grapple every
-frame while the finger is down — so holding acts as a magnet that latches every
-anchor automatically and the release action never has to be used. Gating the
-grab to the press instead collapses hold-forever to 2s, which suggests that is
-the right fix.
+Holding the finger down dominated, because `World.update` retried the grab every
+frame while held — so holding acted as a magnet that latched every anchor by
+itself, and a run could be finished **without ever using the release**. Half the
+advertised control scheme was optional.
 
-It has **not** been applied, deliberately. In the same measurement a mindless
-masher (19s) beat the bot that tries to play properly (13s), which means the
-release heuristic is not a credible stand-in for a human and none of these
-numbers can be trusted as a picture of skilled play. Changing the core control
-scheme on that evidence would be guesswork on a game that currently works.
+The grapple now fires once per press, with a 0.9s reach window so pressing
+slightly early still catches, and the reach indicator shows that window expiring
+rather than leaving a dead finger down. In the rig this drops hold-forever from
+67s to about 2s and leaves a bot that actually plays unchanged at 13s. A test
+asserts it directly: one press fires at most one grapple, and holding forever no
+longer carries a run.
 
-This one needs a thumb, not a bot. If holding the screen down really does carry
-a run, gate the grab to the press — the change is two lines in `World.update`.
+One caveat worth keeping in mind: in the same measurement a mindless masher
+(19s) beat the bot that tries to play properly (13s), so that release heuristic
+is not a credible model of a human and none of these numbers describe skilled
+play. The change is justified by the *degenerate* strategy it removes, which the
+rig does measure reliably — not by the absolute figures.
 
 ## Tests
 
