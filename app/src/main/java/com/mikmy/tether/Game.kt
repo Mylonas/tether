@@ -220,6 +220,9 @@ class Game(ctx: Context, private val sfx: Sfx) {
         sfx.play("start", 0.9f)
     }
 
+    /** Set by MainActivity so a finished run can offer an interstitial. */
+    @JvmField var onRunEnded: (() -> Unit)? = null
+
     private fun gameOver() {
         val world = this.world ?: return
         phase = Phase.OVER
@@ -240,6 +243,7 @@ class Game(ctx: Context, private val sfx: Sfx) {
         burst(world.px, world.py, colVoid, 60, unit * 1.2f)
         sfx.play("die", 1f)
         tap(70)
+        onRunEnded?.invoke()
     }
 
     // ================================================================ INPUT
