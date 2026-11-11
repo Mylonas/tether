@@ -65,6 +65,8 @@ class GameView(
 
     fun handleBack(): Boolean = synchronized(lock) { game.handleBack() }
 
+    fun isOnTitle(): Boolean = synchronized(lock) { game.onTitle }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         // The entire game is one bit: is a finger down or not.
